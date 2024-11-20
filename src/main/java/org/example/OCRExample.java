@@ -7,10 +7,9 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.opencv.core.Core.BORDER_CONSTANT;
 
 public class OCRExample {
     static {
@@ -22,37 +21,26 @@ public class OCRExample {
         rotateImage(imagePath);
 //        resizeImage();
         cropImage();
-        // Step 1: Preprocess the image
-//        Mat image = Imgcodecs.imread(imagePath);
-//        Imgproc.cvtColor(image, image, Imgproc.COLOR_BGR2GRAY);
-//        Imgproc.GaussianBlur(image, image, new Size(3, 3), 0);
-//        Imgproc.resize(image, image, new Size(image.width() * 2, image.height() * 2)); // Increase image size
+        performOCR();
+    }
 
-        // Additional Morphological operation
-//        Imgproc.dilate(image, image, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(2, 2)));
-
-//        Imgproc.threshold(image, image, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
-//        Imgcodecs.imwrite("sample2_processed.jpg", image);
-
-        // Step 2: Run OCR
+    private static String performOCR() {
         Tesseract tesseract = new Tesseract();
         tesseract.setDatapath("E:\\tesdata\\tessdata-main"); // Path to Tesseract language files
         tesseract.setLanguage("fas"); // Set language to Persian
-        tesseract.setOcrEngineMode(1); // Use LSTM OCR engine for better accuracy
-        tesseract.setPageSegMode(6); // Automatic page segmentation
+        tesseract.setPageSegMode(6); // Set segmentation mode
+        tesseract.setTessVariable("user_defined_dpi", "300"); // High DPI for better OCR
+        tesseract.setTessVariable("tessedit_char_whitelist", "۰۱۲۳۴۵۶۷۸۹"); // Whitelist for Persian numbers
 
-        // Add whitelist to recognize Persian numbers only
-//        tesseract.setTessVariable("tessedit_char_whitelist", "۰۱۲۳۴۵۶۷۸۹");
-//        tesseract.setTessVariable("user_defined_dpi", "300");
         try {
-            String text = tesseract.doOCR(new java.io.File("cropped_image.jpg"));
-
+            String ocrResult = tesseract.doOCR(new File("cropped_image.jpg"));
             // Step 3: Extract data to JSON
-            JSONObject jsonObject = extractDataToJson(text);
+            JSONObject jsonObject = extractDataToJson(ocrResult);
             System.out.println(jsonObject.toString(2));
-
+            return ocrResult;
         } catch (TesseractException e) {
             System.err.println("Error in OCR: " + e.getMessage());
+            return null;
         }
     }
 
@@ -157,26 +145,26 @@ public class OCRExample {
 
     }
 
-
     private static void cropImage() {
         String imagePath = "src/main/resources/rotated.jpg";
         // Load the image
         Mat img = Imgcodecs.imread(imagePath);
 
         // Define the region of interest (ROI) for "شماره مرجع"
-        // Adjust the values (x, y, width, height) as necessary
-        int x = 180; // starting x-coordinate of the cropping area
-        int y = 235; // starting y-coordinate of the cropping area
-        int width = 205; // width of the cropping area
-        int height = 40; // height of the cropping area
+        int x = 180; // Adjust this value
+        int y = 235; // Adjust this value
+        int width = 205; // Adjust this value
+        int height = 40; // Adjust this value
 
         // Create a rectangle for the ROI
         Rect roi = new Rect(x, y, width, height);
-
-        // Crop the image
         Mat croppedImg = new Mat(img, roi);
 
-        // Save the cropped image
+        // Preprocess cropped image
+        Imgproc.cvtColor(croppedImg, croppedImg, Imgproc.COLOR_BGR2GRAY);
+        Imgproc.threshold(croppedImg, croppedImg, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
+
+        // Save the cropped image for debug
         Imgcodecs.imwrite("cropped_image.jpg", croppedImg);
     }
 
